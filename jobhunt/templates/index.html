@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% set nav = 'board' %}
+{% block body %}
+
+{% if assessment and assessment.state in ('late', 'stopped', 'unknown') %}
+<div class="panel" style="border-color:{{ '#b4462a' if assessment.state == 'stopped' else 'var(--mid)' }}">
+  <b>Assessment is {{ assessment.state }}</b>
+  {% if assessment.hours_since %}<span class="tag">last pass {{ assessment.hours_since }}h ago</span>{% endif %}
+  {% if assessment.awaiting_assessment %}<span class="tag">{{ assessment.awaiting_assessment }} waiting</span>{% endif %}
+  {% if assessment.collected_since %}<span class="tag">{{ assessment.collected_since }} collected since</span>{% endif %}
+  <div class="muted small" style="margin-top:6px">
+    Collection runs on cron inside this container and looks after itself.
+    Assessment does not &mdash; it needs a Claude Code session to pull the queue,
+    and that session dies when its host reboots. Nothing here breaks when it
+    stops; postings just pile up unread. If this panel says
+    <b>stopped</b>, the loop is gone rather than late: resume the session.
+  </div>
+</div>
+{% elif backlog and backlog.n %}
+<div class="panel" style="border-color:var(--mid)">
+  <b>{{ backlog.n }} posting(s) awaiting assessment</b>
+  {% if backlog.since_last %}<span class="tag">{{ backlog.since_last }} new since the last pass</span>{% endif %}
+  {% if last_assessed %}<span class="tag">last assessed {{ last_assessed[:10] }}</span>{% endif %}
+  <div class="muted small" style="margin-top:6px">
+    These carry a keyword score only &mdash; nothing has read them against the resume.
+  </div>
+</div>
+{% endif %}
+
+{% if regions and regions|length > 1 %}
+<div class="panel" style="padding:10px 16px">
+  <span class="muted small">Region:</span>
+  {% for r in regions %}
+    <a href="/?region={{ r.region|urlencode }}" class="tag"
+       {% if filters.region == r.region %}style="border-color:var(--accent);color:var(--accent)"{% endif %}>{{ r.region }} ({{ r.n }})</a>
+  {% endfor %}
+  <a href="/?region=all" class="tag" {% if filters.region == 'all' %}style="border-color:var(--accent);color:var(--accent)"{% endif %}>all</a>
+  {% if filters.region in region_notes and region_notes[filters.region] %}
+    <div class="muted small" style="margin-top:8px">{{ region_notes[filters.region] }}</div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="panel">
+  <form method="get" class="bar">
+    <input type="hidden" name="region" value="{{ filters.region }}">
+    <input type="text" name="q" value="{{ filters.q }}" placeholder="title or company">
+    <label class="small muted">min fit
+      <input type="number" name="min_score" min="0" max="100" style="width:74px"
+             value="{{ filters.min_score }}"></label>
+    <label class="small muted">min pay $K
+      <input type="number" name="min_pay" min="0" step="10" style="width:78px"
+             value="{{ filters.min_pay }}"></label>
+    <label class="small muted">status
+      <select name="status">
+        <option value="all" {{ 'selected' if filters.status=='all' }}>open</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {{ 'selected' if filters.status==s }}>{{ s }}</option>
+        {% endfor %}
+        <option value="any" {{ 'selected' if filters.status=='any' }}>everything</option>
+      </select></label>
+    <label class="small muted">last N days
+      <input type="number" name="days" min="0" style="width:66px" value="{{ filters.days }}"></label>
+    <label class="small muted">assessment
+      <select name="scored">
+        <option value="all" {{ 'selected' if filters.scored=='all' }}>all</option>
+        <option value="assessed" {{ 'selected' if filters.scored=='assessed' }}>assessed only</option>
+        <option value="pending" {{ 'selected' if filters.scored=='pending' }}>not yet assessed</option>
+      </select></label>
+    <label class="small muted">sort
+      <select name="sort">
+        <option value="assessed" {{ 'selected' if filters.sort=='assessed' }}>assessed first</option>
+        <option value="score" {{ 'selected' if filters.sort=='score' }}>score only</option>
+        <option value="newest" {{ 'selected' if filters.sort=='newest' }}>newest</option>
+      </select></label>
+    <button class="ghost">Filter</button>
+    <span class="muted small" style="margin-left:auto">
+      {% for k, v in counts.items() %}<span class="tag">{{ k }}: {{ v }}</span>{% endfor %}
+      <a href="/mutes" class="tag">dismissed &amp; muted &rarr;</a>
+    </span>
+  </form>
+</div>
+
+<div class="panel scroll">
+  <table>
+    <thead>
+      <tr><th>Fit</th><th>Role</th><th>Company</th><th>Location</th><th>Pay</th>
+          <th>Assessment</th><th>First seen</th><th style="width:186px">Disposition</th></tr>
+    </thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><span class="score s-{{ r.verdict or 'no' }}">{{ r.fit_score if r.fit_score is not none else '—' }}</span></td>
+        <td class="row-title">
+          <a href="/job/{{ r.id }}">{{ r.title }}</a>
+          {% if r.status != 'new' %}<span class="tag">{{ r.status }}</span>{% endif %}
+          {% if r.stage == 'scored' %}<span class="tag" style="border-color:var(--good);color:var(--good)"
+             title="Read against the resume by {{ r.model }}">assessed</span>
+          {% else %}<span class="tag" title="Keyword and rule score only; nothing has read the resume against this posting">keyword only</span>{% endif %}
+          {% if r.note %}<div class="small muted">{{ r.note }}</div>{% endif %}
+        </td>
+        <td>{{ r.company }}{% if r.region and r.region != 'primary' %}<br><span class="tag">{{ r.region }}</span>{% endif %}</td>
+        <td class="small muted" {% if r.n_listings and r.n_listings > 1 %}title="{{ r.locations|join(' · ') }}"{% endif %}>{{ r.location or '—' }}</td>
+        <td class="small" {% if r.salary_source == 'parsed' %}title="parsed from the posting text"{% endif %}>{{ r.pay or '—' }}</td>
+        <td class="small">{{ r.headline or ('not scored yet' if not r.stage else r.stage) }}</td>
+        <td class="small muted" style="white-space:nowrap">
+          {{ r.first_seen[:10] }}<br><span class="tag">{{ r.age_days }}d ago</span>
+        </td>
+        <td>
+          <form method="post" action="/job/{{ r.id }}/status" class="bar" style="gap:5px">
+            <input type="hidden" name="back" value="/?{{ request.url.query }}">
+            <button name="status" value="shortlist" class="ghost" title="Shortlist">★</button>
+            <button name="status" value="applied" class="ghost" title="Applied">✓</button>
+            <!-- name="dismiss", NOT "status": it used to share the buttons' name, so
+                 clicking Applied submitted status=applied AND the select's empty
+                 status=, and Starlette keeps the LAST value -- the tick silently
+                 did nothing. -->
+            <select name="dismiss" onchange="this.form.submit()"
+                    title="Dismiss with a reason. It stops appearing on the board.">
+              <option value="">dismiss…</option>
+              {% for key, label in reasons.items() %}
+              <option value="{{ key }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="muted">
+        Nothing matches. Hit <b>Run now</b>, lower <i>min fit</i>, or widen the filters.
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+# Normalise to LF in the repository. Shell scripts run inside a Linux container,
+# where a CRLF shebang fails as "/bin/sh^M: bad interpreter".
+* text=auto eol=lf
+
+*.sh    text eol=lf
+*.py    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.md    text eol=lf
+*.html  text eol=lf
+Dockerfile      text eol=lf
+docker-entrypoint.sh text eol=lf
+
+*.png binary
+*.jpg binary
+*.docx binary
+*.pdf binary

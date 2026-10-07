@@ -1,0 +1,48 @@
+# Copy to docker-compose.override.yml to add the LinkedIn source.
+#
+# Compose reads docker-compose.override.yml automatically and it is gitignored,
+# so your own timezone, addresses and volume paths stay local to your machine.
+#
+# Why the pinned IP: the LinkedIn MCP server rejects requests whose Host header
+# is a DNS name (HTTP 421 — DNS-rebinding protection in the MCP streamable-http
+# transport). It accepts IP literals, so jobhunt addresses it by a pinned IP
+# rather than by container name, and the subnet is pinned so those addresses
+# survive a recreate. jobhunt also sends `Host: localhost` for plain-HTTP bare
+# hostnames, which covers the same problem from the client side.
+#
+# Setup, limits and the one-time login are documented in docs/LINKEDIN.md.
+# Read that first — this source runs on a real authenticated session, and the
+# account matters more than the coverage.
+services:
+  jobhunt:
+    environment:
+      # The in-container scheduler reads TZ, so set this to your own zone or
+      # cron times fire at the wrong hour.
+      TZ: Etc/UTC
+    networks:
+      default:
+        ipv4_address: 172.18.0.5
+
+  linkedin-mcp:
+    # Pinned by digest on purpose: this container holds a logged-in session.
+    image: stickerdaniel/linkedin-mcp-server@sha256:6fbdeb5bea31955c10d76ff202b043228c74899366836aab2beb6808c712e701
+    container_name: linkedin-mcp
+    restart: unless-stopped
+    command: ["--transport","streamable-http","--host","0.0.0.0","--port","8080","--path","/mcp"]
+    environment:
+      # Without this the login fails with a 30s Page.goto timeout that looks
+      # exactly like a network fault. See docs/LINKEDIN.md.
+      TIMEOUT: "120000"
+      LOG_LEVEL: "INFO"
+    volumes:
+      - ${HOME}/.jobhunt/linkedin-mcp:/home/pwuser/.linkedin-mcp
+    networks:
+      default:
+        ipv4_address: 172.18.0.10
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
+          gateway: 172.18.0.1

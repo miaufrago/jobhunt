@@ -1,0 +1,198 @@
+# jobhunt — consolidated job search + fit assessment
+#
+# This is the EXAMPLE profile. It is deliberately generic: it belongs to nobody,
+# and it will not produce good results until you replace it with yours.
+#
+# The fastest way to do that is to let Claude Code interview you:
+#
+#     claude
+#     > /setup-jobhunt
+#
+# It reads your resume, asks what you actually want, and writes `data/config.yaml`
+# for you. Everything below is what it writes -- edit it by hand any time, either
+# in the file or from the Settings page once the board is running.
+#
+# Key reference: README.md, "Tuning the profile".
+
+profile:
+  # Path to the resume the scorer reads, relative to the data volume.
+  resume_path: profile/resume.md
+
+  # Where you would actually work. "remote" matches remote/anywhere postings.
+  # Replace these with your own metros -- these are placeholders.
+  locations:
+    - remote
+    - Denver
+    - Boulder
+    - Colorado
+
+  # Coarse pre-filter. A posting is scored only if its title matches an include
+  # pattern AND matches no exclude pattern. Python regexes.
+  include_title_patterns:
+    - '(?i)\b(product|program|project|operations)\b.{0,20}\bmanager\b'
+    - '(?i)\b(principal|staff|lead|senior|sr\.?)\b.{0,30}\b(manager|product|program)\b'
+  exclude_title_patterns:
+    - '(?i)\b(intern|internship|co-?op|apprentice)\b'
+    - '(?i)\b(recruiter|business development|sales representative)\b'
+
+  # Seniority you will accept:
+  #   0=entry  1=associate  2=mid  3=principal IC  4=manager
+  #   5=senior manager  6=director  7=senior director  8=VP  9=chief
+  #
+  # `target_levels` is an explicit set, for a band with a hole in it (principal
+  # IC plus director-and-above, skipping manager). `target_level_range` is for a
+  # contiguous band. Set BOTH to the same intent: the heuristic scorer reads
+  # `target_levels`, and the model rubric reads `target_level_range`.
+  target_levels: [2, 3, 4]
+  target_level_range: [2, 4]
+
+  # Remote must be US-based; on-site must be in the metros above. A posting whose
+  # only location is another country is dropped before it is scored.
+  # Options: us_only | anywhere | none
+  remote_scope: us_only
+  exclude_location_patterns:
+    - '(?i)\b(india|philippines|poland|romania|brazil|mexico|canada|uk|ireland)\b'
+
+  # Metros you would consider for the right role, shown as a separate tab rather
+  # than mixed into the primary results.
+  #
+  # SHAPE: a mapping of name -> {markers: [...]}. Markers are plain strings
+  # matched on word boundaries, NOT regexes.
+  secondary_regions:
+    Bay Area:
+      markers: ["san francisco", "palo alto", "mountain view", "sunnyvale", "bay area"]
+
+  # Postings scoring below this never appear on the board at all.
+  min_fit_to_show: 30
+
+  pay:
+    # Full marks on the comp axis.
+    target_base: 160000
+    # A stated range topping out below this CANNOT be a strong match.
+    floor: 130000
+    # Comp is a gate, not a tiebreaker. Set false to make it advisory.
+    floor_caps_verdict: true
+
+  # Relative importance of each axis. Normalized, so they need not total 100.
+  scoring_weights:
+    level: 18
+    domain: 36
+    pay: 24
+    location: 12
+    listing: 10
+
+  verdict_thresholds:
+    strong: 72
+    possible: 55
+    weak: 35
+
+  # THE BIGGEST LEVER. Weighted phrases evidencing your real charters, not
+  # adjacent buzzwords. Two people in different fields share none of these.
+  #
+  # SHAPE: a mapping of label -> {weight: N, phrases: [...]}. Weight is
+  # relative; 1 to 10 is sensible. These placeholders are generic on purpose --
+  # replace them, or the domain axis (the heaviest one) scores noise.
+  domains:
+    product management:
+      weight: 9
+      phrases: ["product roadmap", "product strategy", "discovery", "user research",
+                "product requirements", "prioritization"]
+    delivery & release:
+      weight: 7
+      phrases: ["release management", "sprint", "agile", "backlog", "cross-functional"]
+    measurement:
+      weight: 6
+      phrases: ["kpi", "okr", "north star metric", "instrumentation", "a/b test"]
+    customer & support operations:
+      weight: 5
+      phrases: ["customer feedback", "support", "escalation", "triage", "churn"]
+
+  # Gates the keyword scorer cannot read: years-of-experience bars and
+  # onsite/residency mandates stated in the body rather than the metadata.
+  # Both rules are deliberately lenient -- a false positive here is silent,
+  # because it drops a posting out of the queue and nobody ever sees it.
+  # See jobhunt/scoring/hard_requirements.py.
+  hard_requirements:
+    enabled: true
+    years_experience: 6        # YOUR years in the target discipline
+    years_tolerance: 4         # fatal only at 10+ required against 6
+    home_markers:              # lowercase; "remote" deliberately absent
+      - denver
+      - boulder
+      - colorado
+
+  # Appended to the generic built-ins (clearance, staffing agencies, contracts).
+  #
+  # SHAPE: a list of {cost, label, phrases}. `cost` is subtracted from the score
+  # and any hit zeroes the listing-quality axis.
+  extra_disqualifiers:
+    - cost: 25
+      label: "commission-only compensation"
+      phrases: ["commission only", "100% commission", "uncapped commission only"]
+    - cost: 20
+      label: "unpaid or equity-only"
+      phrases: ["unpaid", "equity only", "sweat equity"]
+
+# Terms sent to the aggregators and to LinkedIn. Keep this SHORT: each term is a
+# separate paged search against every enabled source, and run time scales with
+# the count. Six to fourteen is a sensible range.
+search_terms:
+  - "product manager"
+  - "senior product manager"
+  - "product operations manager"
+  - "program manager"
+
+sources:
+  # Hard ceiling for one collection pass. Sources still running at the end are
+  # recorded as timed out rather than wedging the run.
+  run_budget_seconds: 1800
+  aggregators:
+    enabled: true
+    # zip_recruiter returns 403 and glassdoor 400 from a datacenter IP; both are
+    # re-enabled by adding them back here if that changes.
+    sites: [indeed, linkedin, google]
+    location: "Denver, CO"
+    results_per_term: 40
+    hours_old: 168
+  dice:
+    enabled: true
+    mcp_url: "https://mcp.dice.com/mcp"
+  # Self-hosted MCP server holding an authenticated LinkedIn session.
+  # OPTIONAL -- the board works without it. See docs/LINKEDIN.md for the
+  # one-time login. Limits are deliberately conservative: cadence is what
+  # distinguishes automation, and the account is the thing being protected.
+  linkedin_mcp:
+    enabled: false
+    mcp_url: "http://linkedin-mcp:8080/mcp"
+    location: "United States"
+    date_posted: past_week
+    max_pages: 1
+    searches_per_run: 6
+    seconds_between_searches: 45
+    seconds_between_details: 6
+    max_details_per_run: 40
+  employers:
+    enabled: true
+
+scoring:
+  # auto -> Anthropic if a key exists, else Ollama if reachable, else heuristic.
+  backend: auto            # auto | ollama | anthropic | heuristic
+  deep_score_threshold: 55 # heuristic score needed before a model reads a posting
+
+schedule:
+  # Container-local cron. Set TZ in docker-compose.yml so these mean what you
+  # think they mean. Leave either blank to disable it.
+  full_sweep_cron: "0 12 * * *"
+  aggregator_poll_cron: "0 9,18 * * *"
+
+# Employers whose own ATS you want polled directly. Verify any addition with:
+#     docker exec jobhunt python -m jobhunt.cli verify-employers
+# Roughly a third of large employers have no public feed; those arrive through
+# the aggregator pass instead. Start small and add the ones you care about.
+employers:
+  - name: Stripe
+    type: greenhouse
+    slug: stripe
+  - name: Datadog
+    type: greenhouse
+    slug: datadog

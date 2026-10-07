@@ -1,0 +1,18 @@
+services:
+  jobhunt:
+    build: .
+    image: jobhunt:latest
+    container_name: jobhunt
+    restart: unless-stopped
+    ports:
+      - "8377:8080"          # host port -> container port
+    volumes:
+      - ./data:/data          # or an absolute path on your Docker host
+    environment:
+      # Optional. Scoring falls back to the heuristic backend without it.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Required once the container is reachable from outside your LAN.
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      # Keeps you signed in across restarts. Any long random string.
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      TZ: America/Los_Angeles

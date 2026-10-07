@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% set nav = 'mutes' %}
+{% block title %}Dismissed &amp; muted{% endblock %}
+{% block body %}
+
+<div class="panel">
+  <b>What you have set aside</b>
+  <div class="muted small">Dismissing hides one posting. Muting a company hides
+  every posting it files, past and future. The breakdown is worth reading as
+  feedback on the search itself &mdash; a pile of "pay too low" means the search
+  terms are aimed below the target, not that ten separate roles were wrong.</div>
+</div>
+
+<div class="panel">
+  <div class="muted small" style="margin-bottom:8px"><b>Why postings were dismissed</b></div>
+  {% if breakdown %}
+  <table>
+    <thead><tr><th>Reason</th><th style="width:90px">Count</th></tr></thead>
+    <tbody>
+      {% for b in breakdown %}
+      <tr><td>{{ reasons.get(b.reason, b.reason) }}</td><td>{{ b.n }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="muted small">Nothing dismissed yet.</div>{% endif %}
+</div>
+
+<div class="panel scroll">
+  <div class="muted small" style="margin-bottom:8px"><b>Muted companies</b></div>
+  {% if mutes %}
+  <table>
+    <thead><tr><th>Company</th><th>Note</th><th>Muted</th><th style="width:90px"></th></tr></thead>
+    <tbody>
+      {% for m in mutes %}
+      <tr>
+        <td class="row-title">{{ m.label }}</td>
+        <td class="small muted">{{ m.note or '' }}</td>
+        <td class="small muted">{{ m.created[:10] }}</td>
+        <td>
+          <form method="post" action="/mutes/{{ m.id }}/delete">
+            <button class="ghost">Unmute</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="muted small">No muted companies. Use <b>Mute company</b> on any job page.</div>
+  {% endif %}
+</div>
+
+<div class="panel scroll">
+  <div class="muted small" style="margin-bottom:8px"><b>Recently dismissed</b></div>
+  {% if recent %}
+  <table>
+    <thead><tr><th>Role</th><th>Company</th><th>Reason</th><th>Note</th><th>When</th></tr></thead>
+    <tbody>
+      {% for r in recent %}
+      <tr>
+        <td class="row-title"><a href="/job/{{ r.id }}">{{ r.title }}</a></td>
+        <td>{{ r.company }}</td>
+        <td class="small">{{ reasons.get(r.reason, r.reason or '—') }}</td>
+        <td class="small muted">{{ r.note or '' }}</td>
+        <td class="small muted">{{ r.updated[:10] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="muted small">Nothing dismissed yet.</div>{% endif %}
+</div>
+{% endblock %}

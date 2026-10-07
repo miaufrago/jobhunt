@@ -1,0 +1,9 @@
+# Test configuration only. jobhunt is not a installable package -- it runs from
+# a checkout inside the container -- so there is no build system here.
+[tool.pytest.ini_options]
+# Without this, a bare `pytest` cannot import `jobhunt`: pytest does not add the
+# working directory to sys.path, so every test module fails collection with
+# ModuleNotFoundError. `python -m pytest` happens to work because -m does add it.
+# Setting it here means the obvious command is the one that works.
+pythonpath = ["."]
+testpaths = ["tests"]

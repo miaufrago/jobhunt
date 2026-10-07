@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% set nav = 'sources' %}
+{% block body %}
+
+<div class="panel">
+  <div class="bar">
+    <div>
+      <b>Source health</b>
+      <div class="muted small">ATS slugs and Workday tenants drift. Verify before trusting the list.</div>
+    </div>
+    <form method="post" action="/sources/verify" style="margin-left:auto">
+      <button class="ghost">Verify all sources</button>
+    </form>
+  </div>
+</div>
+
+<div class="panel scroll">
+  <table>
+    <thead><tr><th>Source</th><th>Status</th><th>Jobs</th><th>Detail</th><th>Checked</th></tr></thead>
+    <tbody>
+    {% for h in health %}
+      <tr>
+        <td class="row-title">{{ h.source }}</td>
+        <td><span class="score {{ 's-strong' if h.ok else 's-no' }}">{{ 'OK' if h.ok else 'FAIL' }}</span></td>
+        <td>{{ h.n_jobs }}</td>
+        <td class="small muted">{{ h.detail }}</td>
+        <td class="small muted">{{ h.checked[:16].replace('T',' ') }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">No checks yet. Hit <b>Verify all sources</b>.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="panel scroll">
+  <div class="muted small" style="margin-bottom:8px"><b>Recent runs</b></div>
+  <table>
+    <thead><tr><th>Kind</th><th>Finished</th><th>Stats</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+      <tr>
+        <td>{{ r.kind }}</td>
+        <td class="small muted">{{ r.finished_at[:16].replace('T',' ') }}</td>
+        <td class="small">{{ r.error if r.error else r.stats }}</td>
+      </tr>
+    {% else %}<tr><td colspan="3" class="muted">No runs yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

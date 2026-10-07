@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="panel" style="max-width:380px;margin:60px auto">
+  <div style="font-weight:650;margin-bottom:12px">{{ instance }}</div>
+  {% if error %}<div class="small" style="color:var(--bad);margin-bottom:10px">{{ error }}</div>{% endif %}
+  <form method="post" action="/login" class="bar">
+    <input type="password" name="password" placeholder="password" autofocus style="flex:1">
+    <button>Sign in</button>
+  </form>
+</div>
+{% endblock %}

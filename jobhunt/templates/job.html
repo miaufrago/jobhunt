@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% set nav = 'board' %}
+{% block title %}{{ job.title }} — {{ job.company }}{% endblock %}
+{% block body %}
+
+<div class="panel">
+  <div class="bar">
+    <span class="score s-{{ job.verdict or 'no' }}" style="font-size:20px;min-width:60px">
+      {{ job.fit_score if job.fit_score is not none else '—' }}</span>
+    <div>
+      <div style="font-size:19px;font-weight:650">{{ job.title }}</div>
+      <div class="muted small">{{ job.company }} · {{ job.location or 'location unstated' }}
+        {% if job.other_listings %} <span class="tag">+{{ job.other_listings|length }} more location{{ '' if job.other_listings|length == 1 else 's' }}</span>{% endif %}
+        {% if job.pay %} · {{ job.pay }}{% if job.salary_source == 'parsed' %}<span class="muted"> (parsed)</span>{% endif %}{% endif %}
+      </div>
+    </div>
+    <a href="{{ job.url }}" target="_blank" rel="noopener" style="margin-left:auto">
+      <button>Open posting ↗</button></a>
+  </div>
+  <div class="small muted" style="margin-top:10px">
+    {% for s in job.sources_list %}<span class="tag">{{ s }}</span>{% endfor %}
+    <span class="tag">first seen {{ job.first_seen[:10] }}</span>
+    <span class="tag">last seen {{ job.last_seen[:10] }}</span>
+    {% if job.model %}<span class="tag">{{ job.model }}</span>{% endif %}
+    {% if job.stage %}<span class="tag">{{ job.stage }}</span>{% endif %}
+  </div>
+</div>
+
+{% if job.headline %}
+<div class="panel">
+  <div style="font-size:16px;font-weight:600;margin-bottom:8px">{{ job.headline }}</div>
+  <p class="small">{{ job.rationale }}</p>
+  <div class="grid2" style="margin-top:12px">
+    <div>
+      <div class="muted small"><b>Evidence in your resume</b></div>
+      <ul class="clean small">{% for s in job.strengths %}<li>{{ s }}</li>{% endfor %}</ul>
+    </div>
+    <div>
+      <div class="muted small"><b>Gaps against the posting</b></div>
+      <ul class="clean small">{% for g in job.gaps %}<li>{{ g }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+  {% if job.red_flags %}
+  <div style="margin-top:12px">
+    <div class="muted small"><b>Red flags</b></div>
+    <ul class="clean small">{% for f in job.red_flags %}<li>{{ f }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="panel">
+  <form method="post" action="/job/{{ job.id }}/status" class="bar">
+    <input type="hidden" name="back" value="/job/{{ job.id }}">
+    <label class="small muted">status
+      <select name="status">
+        {% for s in statuses %}
+        <option value="{{ s }}" {{ 'selected' if job.status==s }}>{{ s }}</option>
+        {% endfor %}
+      </select></label>
+    <label class="small muted">reason
+      <select name="reason">
+        <option value="">—</option>
+        {% for key, label in reasons.items() %}
+        <option value="{{ key }}" {{ 'selected' if job.reason==key }}>{{ label }}</option>
+        {% endfor %}
+      </select></label>
+    <input type="text" name="note" value="{{ job.note or '' }}"
+           placeholder="note — what made this a yes or a no"
+           style="flex:1;min-width:240px">
+    <button>Save</button>
+  </form>
+  <p class="small muted" style="margin:8px 0 0">
+    Marks made in Five Before Noon live in that page's own store — a published
+    artifact cannot reach this board — and are reconciled here by
+    <code>tools/sync_apply_state.py</code>.
+  </p>
+  <form method="post" action="/job/{{ job.id }}/mute-company" class="bar"
+        style="margin-top:10px">
+    <input type="hidden" name="back" value="/">
+    <button class="ghost">Mute {{ job.company }} — hide every posting they file</button>
+    <a href="/" class="small muted" style="margin-left:auto">back to board</a>
+  </form>
+</div>
+
+{% if job.other_listings %}
+<div class="panel">
+  <div class="muted small" style="margin-bottom:8px">
+    <b>Also listed in {{ job.other_listings|length }} other location{{ '' if job.other_listings|length == 1 else 's' }}</b>
+    — one role, filed once per city. The assessment above applies to all of them.
+  </div>
+  <ul class="clean small">
+    {% for o in job.other_listings %}
+    <li>
+      <a href="/job/{{ o.id }}">{{ o.location or 'location unstated' }}</a>
+      {% if o.url %} · <a href="{{ o.url }}" target="_blank" rel="noopener">apply ↗</a>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="panel">
+  <div class="muted small" style="margin-bottom:8px"><b>Posting</b></div>
+  <pre class="jd">{{ job.description or 'No description captured for this posting.' }}</pre>
+</div>
+{% endblock %}

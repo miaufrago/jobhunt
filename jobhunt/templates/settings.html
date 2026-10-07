@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% set nav = 'settings' %}
+{% block body %}
+
+{% if saved %}<div class="panel" style="border-color:var(--good)">Saved. Schedule reloaded.</div>{% endif %}
+{% if error %}<div class="panel" style="border-color:var(--bad)">{{ error }}</div>{% endif %}
+
+<form method="post">
+  <div class="panel">
+    <div class="muted small" style="margin-bottom:8px">
+      <b>config.yaml</b> — search terms, target titles, locations, employers, schedule.
+    </div>
+    <textarea name="config_yaml" rows="26" spellcheck="false">{{ yaml }}</textarea>
+  </div>
+
+  <div class="panel">
+    <div class="muted small" style="margin-bottom:8px">
+      <b>Resume</b> — plain text or markdown. Every fit assessment scores against exactly this.
+    </div>
+    <textarea name="resume" rows="18" spellcheck="false">{{ resume }}</textarea>
+  </div>
+
+  <div class="panel bar">
+    <button>Save</button>
+    <span class="muted small">Saving re-reads the cron schedule. Existing scores are kept
+      until a posting's description changes.</span>
+  </div>
+</form>
+{% endblock %}

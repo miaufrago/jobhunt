@@ -1,0 +1,38 @@
+# --- Runtime state -----------------------------------------------------------
+data/
+out/
+backups/
+*.err
+
+# --- Python ------------------------------------------------------------------
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# --- Secrets -----------------------------------------------------------------
+.env
+# Instance env files hold hostnames, passwords and API tokens.
+instances/*.env
+!instances/example.env
+
+# --- Personal data -----------------------------------------------------------
+# The whole point of this project is that nothing personal lives in the code.
+# A real profile and a real resume are runtime inputs, mounted from the data
+# volume. Only the .example.* templates are tracked.
+config.yaml
+profile/*
+!profile/resume.example.md
+profiles/
+docs/*.docx
+docs/*.pdf
+
+# --- Local scratch -----------------------------------------------------------
+tools/*.out
+# Operator-specific scripts that are not part of the product.
+tools/vikunja_seed.py
+tools/unifi-mcp.sh
+.claude/scheduled_tasks.lock
+
+# Local compose overrides (your timezone, addresses, volume paths).
+docker-compose.override.yml
